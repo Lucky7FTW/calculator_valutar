@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertor Valutar</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Convertor Valutar</h2>
+        <label for="amount">Sumă</label>
+        <input type="number" id="amount" placeholder="Introduceți suma">
+
+        <label for="from-currency">Din</label>
+        <select id="from-currency"></select>
+
+        <label for="to-currency">În</label>
+        <select id="to-currency"></select>
+
+        <button id="convert">Convert</button>
+        
+        <h3>Rezultat: <span id="result">0</span></h3>
+        
+        <button id="copy" style="display:none;">Copiază rezultatul</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
