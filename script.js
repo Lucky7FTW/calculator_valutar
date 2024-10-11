@@ -45,7 +45,7 @@ async function convertCurrency() {
         }
 
         const result = (amount / fromRate * toRate).toString();
-        resultDisplay.textContent = `Rezultatul: ${result}`;
+        resultDisplay.textContent = result;  
     } catch (error) {
         console.error("Eroare la conversie:", error);
     }
