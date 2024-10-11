@@ -44,8 +44,8 @@ async function convertCurrency() {
             return;
         }
 
-        const result = (amount / fromRate * toRate).toString();
-        resultDisplay.textContent = result;  
+        const convertedValue = (amount / fromRate * toRate).toFixed(2);
+        resultDisplay.textContent = `${amount} ${fromCurrency} = ${convertedValue} ${toCurrency}`;
     } catch (error) {
         console.error("Eroare la conversie:", error);
     }
@@ -53,8 +53,9 @@ async function convertCurrency() {
 
 function copyResult() {
     const resultText = resultDisplay.textContent;
-    if (resultText) {
-        navigator.clipboard.writeText(resultText).then(() => {
+    const valueToCopy = resultText.split(' = ')[1]; 
+    if (valueToCopy) {
+        navigator.clipboard.writeText(valueToCopy).then(() => {
             alert("Rezultatul a fost copiat în clipboard!");
         }).catch(err => {
             console.error("Eroare la copiere:", err);
