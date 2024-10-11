@@ -1,78 +1,70 @@
 const apiKey = 'ef5ffc451f06478b9d795bdfa7587f5c';
-const currencyListUrl = `https://openexchangerates.org/api/currencies.json`;
-const baseUrl = `https://openexchangerates.org/api/latest.json?app_id=${apiKey}`;
+const fromSelect = document.getElementById('from');
+const toSelect = document.getElementById('to');
+const amountInput = document.getElementById('amount');
+const resultDisplay = document.getElementById('result');
+const convertButton = document.getElementById('convertButton');
+const copyButton = document.getElementById('copyButton');
 
-function populateCurrencies() {
-    fetch(currencyListUrl)
-        .then(response => response.json())
-        .then(data => {
-            const fromCurrency = document.getElementById("from-currency");
-            const toCurrency = document.getElementById("to-currency");
-
-            for (const currencyCode in data) {
-                const currencyName = data[currencyCode];
-
-                const optionFrom = document.createElement("option");
-                optionFrom.value = currencyCode;
-                optionFrom.textContent = `${currencyCode} (${currencyName})`;
-                fromCurrency.appendChild(optionFrom);
-
-                const optionTo = document.createElement("option");
-                optionTo.value = currencyCode;
-                optionTo.textContent = `${currencyCode} (${currencyName})`;
-                toCurrency.appendChild(optionTo);
-            }
-        })
-        .catch(error => {
-            console.error("Eroare la obținerea listei de monede:", error);
-        });
+async function populateCurrencies() {
+    try {
+        const response = await fetch(`https://openexchangerates.org/api/currencies.json?app_id=${apiKey}`);
+        const currencies = await response.json();
+        
+        for (const [currency, name] of Object.entries(currencies)) {
+            const optionFrom = new Option(`${currency} (${name})`, currency);
+            const optionTo = new Option(`${currency} (${name})`, currency);
+            fromSelect.add(optionFrom);
+            toSelect.add(optionTo);
+        }
+    } catch (error) {
+        console.error("Eroare la obținerea listei de monede:", error);
+    }
 }
 
-document.getElementById("convert").addEventListener("click", function() {
-    const amount = document.getElementById("amount").value;
-    const fromCurrency = document.getElementById("from-currency").value;
-    const toCurrency = document.getElementById("to-currency").value;
+async function convertCurrency() {
+    const amount = parseFloat(amountInput.value);
+    const fromCurrency = fromSelect.value;
+    const toCurrency = toSelect.value;
 
-    if (amount === "" || amount <= 0) {
-        alert("Vă rugăm să introduceți o sumă validă.");
+    if (isNaN(amount) || amount <= 0) {
+        alert("Te rugăm să introduci o sumă validă.");
         return;
     }
 
-    fetch(baseUrl)
-        .then(response => response.json())
-        .then(data => {
-            const rates = data.rates;
-            const fromRate = rates[fromCurrency];
-            const toRate = rates[toCurrency];
-            
-            if (!fromRate || !toRate) {
-                alert("Nu există date disponibile pentru această conversie.");
-                return;
-            }
+    try {
+        const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${apiKey}`);
+        const data = await response.json();
 
-            // Calculăm valoarea convertită fără rotunjire
-            const result = Math.floor((amount / fromRate * toRate) * 100) / 100;
-            document.getElementById("result").textContent = `${amount} ${fromCurrency} = ${result} ${toCurrency}`;
+        const fromRate = data.rates[fromCurrency];
+        const toRate = data.rates[toCurrency];
+        
+        if (!fromRate || !toRate) {
+            alert("Moneda selectată nu este validă.");
+            return;
+        }
 
-            // Afișăm butonul pentru copiere
-            const copyButton = document.getElementById("copy");
-            copyButton.style.display = "inline";  // Arată butonul
-        })
-        .catch(error => {
-            alert("A apărut o eroare. Vă rugăm să încercați din nou.");
-            console.error(error);
+        const result = (amount / fromRate * toRate).toString();
+        resultDisplay.textContent = `Rezultatul: ${result}`;
+    } catch (error) {
+        console.error("Eroare la conversie:", error);
+    }
+}
+
+function copyResult() {
+    const resultText = resultDisplay.textContent;
+    if (resultText) {
+        navigator.clipboard.writeText(resultText).then(() => {
+            alert("Rezultatul a fost copiat în clipboard!");
+        }).catch(err => {
+            console.error("Eroare la copiere:", err);
         });
-});
+    } else {
+        alert("Nu există rezultat de copiat.");
+    }
+}
 
-document.getElementById("copy").addEventListener("click", function() {
-    const resultText = document.getElementById("result").textContent;
-
-    navigator.clipboard.writeText(resultText).then(() => {
-        alert("Rezultatul a fost copiat în clipboard!");
-    }).catch(error => {
-        console.error("Eroare la copierea în clipboard:", error);
-        alert("Nu s-a putut copia rezultatul. Încercați din nou.");
-    });
-});
+convertButton.addEventListener('click', convertCurrency);
+copyButton.addEventListener('click', copyResult);
 
 populateCurrencies();
