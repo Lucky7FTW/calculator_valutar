@@ -5,6 +5,7 @@ const amountInput = document.getElementById('amount');
 const resultDisplay = document.getElementById('result');
 const convertButton = document.getElementById('convertButton');
 const copyButton = document.getElementById('copyButton');
+const notification = document.getElementById('notification');
 
 async function populateCurrencies() {
     try {
@@ -28,7 +29,7 @@ async function convertCurrency() {
     const toCurrency = toSelect.value;
 
     if (isNaN(amount) || amount <= 0) {
-        alert("Te rugăm să introduci o sumă validă.");
+        showNotification("Te rugăm să introduci o sumă validă.");
         return;
     }
 
@@ -40,7 +41,7 @@ async function convertCurrency() {
         const toRate = data.rates[toCurrency];
         
         if (!fromRate || !toRate) {
-            alert("Moneda selectată nu este validă.");
+            showNotification("Moneda selectată nu este validă.");
             return;
         }
 
@@ -56,13 +57,22 @@ function copyResult() {
     const valueToCopy = resultText.split(' = ')[1]; 
     if (valueToCopy) {
         navigator.clipboard.writeText(valueToCopy).then(() => {
-            alert("Rezultatul a fost copiat în clipboard!");
+            showNotification("Rezultatul a fost copiat în clipboard!");
         }).catch(err => {
             console.error("Eroare la copiere:", err);
         });
     } else {
-        alert("Nu există rezultat de copiat.");
+        showNotification("Nu există rezultat de copiat.");
     }
+}
+
+function showNotification(message) {
+    notification.textContent = message;
+    notification.style.display = "block";
+    
+    setTimeout(() => {
+        notification.style.display = "none";
+    }, 3000);
 }
 
 convertButton.addEventListener('click', convertCurrency);
