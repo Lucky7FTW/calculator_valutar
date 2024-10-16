@@ -7,19 +7,34 @@ const convertButton = document.getElementById('convertButton');
 const copyButton = document.getElementById('copyButton');
 const notification = document.getElementById('notification');
 
+const CURRENCIES_STORAGE_KEY = 'currenciesData';
+const RATES_STORAGE_KEY = 'ratesData';
+const CACHE_EXPIRATION = 12 * 60 * 60 * 1000;
+
 async function populateCurrencies() {
-    try {
-        const response = await fetch(`https://openexchangerates.org/api/currencies.json?app_id=${apiKey}`);
-        const currencies = await response.json();
-        
-        for (const [currency, name] of Object.entries(currencies)) {
-            const optionFrom = new Option(`${currency} (${name})`, currency);
-            const optionTo = new Option(`${currency} (${name})`, currency);
-            fromSelect.add(optionFrom);
-            toSelect.add(optionTo);
+    const currenciesData = getLocalStorageData(CURRENCIES_STORAGE_KEY);
+    if (currenciesData && !isCacheExpired(currenciesData.timestamp)) {
+        addCurrenciesToSelect(currenciesData.data);
+    } else {
+        try {
+            const response = await fetch(`https://openexchangerates.org/api/currencies.json?app_id=${apiKey}`);
+            const currencies = await response.json();
+            setLocalStorageData(CURRENCIES_STORAGE_KEY, currencies);
+            addCurrenciesToSelect(currencies);
+        } catch (error) {
+            console.error("Eroare la obținerea listei de monede:", error);
         }
-    } catch (error) {
-        console.error("Eroare la obținerea listei de monede:", error);
+    }
+}
+
+function addCurrenciesToSelect(currencies) {
+    fromSelect.innerHTML = '';
+    toSelect.innerHTML = '';
+    for (const [currency, name] of Object.entries(currencies)) {
+        const optionFrom = new Option(`${currency} (${name})`, currency);
+        const optionTo = new Option(`${currency} (${name})`, currency);
+        fromSelect.add(optionFrom);
+        toSelect.add(optionTo);
     }
 }
 
@@ -33,38 +48,52 @@ async function convertCurrency() {
         return;
     }
 
-    try {
-        const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${apiKey}`);
-        const data = await response.json();
-
-        const fromRate = data.rates[fromCurrency];
-        const toRate = data.rates[toCurrency];
-        
-        if (!fromRate || !toRate) {
-            showNotification("Moneda selectată nu este validă.");
-            return;
+    const ratesData = getLocalStorageData(RATES_STORAGE_KEY);
+    if (!ratesData || isCacheExpired(ratesData.timestamp)) {
+        try {
+            const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${apiKey}`);
+            const data = await response.json();
+            setLocalStorageData(RATES_STORAGE_KEY, data.rates);
+            calculateAndDisplayResult(data.rates, amount, fromCurrency, toCurrency, Date.now());
+        } catch (error) {
+            console.error("Eroare la conversie:", error);
         }
-
-        const convertedValue = (amount / fromRate * toRate).toFixed(2);
-        resultDisplay.textContent = `${amount} ${fromCurrency} = ${convertedValue} ${toCurrency}`;
-    } catch (error) {
-        console.error("Eroare la conversie:", error);
+    } else {
+        calculateAndDisplayResult(ratesData.data, amount, fromCurrency, toCurrency, ratesData.timestamp);
     }
+}
+
+function calculateAndDisplayResult(rates, amount, fromCurrency, toCurrency, timestamp) {
+    const fromRate = rates[fromCurrency];
+    const toRate = rates[toCurrency];
+
+    if (!fromRate || !toRate) {
+        showNotification("Moneda selectată nu este validă.");
+        return;
+    }
+
+    const convertedValue = (amount / fromRate * toRate).toFixed(2);
+    const lastUpdatedDate = new Date(timestamp).toLocaleString();
+
+    resultDisplay.textContent = `${amount} ${fromCurrency} = ${convertedValue} ${toCurrency} (Rată actualizată la: ${lastUpdatedDate})`;
 }
 
 function copyResult() {
     const resultText = resultDisplay.textContent;
-    const valueToCopy = resultText.split(' = ')[1]; 
-    if (valueToCopy) {
+    const match = resultText.match(/= ([\d.]+)/);
+
+    if (match && match[1]) {
+        const valueToCopy = match[1]; 
         navigator.clipboard.writeText(valueToCopy).then(() => {
-            showNotification("Rezultatul a fost copiat în clipboard!");
+            showNotification("Valoarea convertită a fost copiată în clipboard!");
         }).catch(err => {
             console.error("Eroare la copiere:", err);
         });
     } else {
-        showNotification("Nu există rezultat de copiat.");
+        showNotification("Nu există rezultat valid de copiat.");
     }
 }
+
 
 function showNotification(message) {
     notification.textContent = message;
@@ -73,6 +102,23 @@ function showNotification(message) {
     setTimeout(() => {
         notification.style.display = "none";
     }, 3000);
+}
+
+function setLocalStorageData(key, data) {
+    const dataWithTimestamp = {
+        timestamp: Date.now(),
+        data: data
+    };
+    localStorage.setItem(key, JSON.stringify(dataWithTimestamp));
+}
+
+function getLocalStorageData(key) {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : null;
+}
+
+function isCacheExpired(timestamp) {
+    return (Date.now() - timestamp) > CACHE_EXPIRATION;
 }
 
 convertButton.addEventListener('click', convertCurrency);
